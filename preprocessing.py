@@ -4,7 +4,11 @@ from pydicom.pixel_data_handlers.util import apply_voi_lut
 import numpy as np
 import tensorflow as tf 
 import matplotlib as plt
+import pandas as pd
 
+
+csv_path = ".\\GroundTruth.csv"
+metadata = pd.read_csv(csv_path)
 
 # Adjust image size to be consistent with expected input of pre-trained models
 def read_dcm(path, img_size = (224, 224)):
@@ -30,11 +34,18 @@ def read_dcm(path, img_size = (224, 224)):
     
 def load_images(folder):
     images = []
+    labels = []
+
     for filename in os.listdir(folder):
         if filename.endswith(".dcm"):
             image_path = os.path.join(folder, filename)
             image = read_dcm(image_path)
+
+            base_name = os.path.splitext(filename)[0]
+            row = metadata[metadata['image_name'] == base_name]
+            label = row['target'].values[0] if not row.empty else -1
             images.append(image)
+            labels.append(label)
     return images
 
 current_directory = os.getcwd()

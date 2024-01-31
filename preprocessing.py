@@ -3,8 +3,9 @@ import pydicom
 from pydicom.pixel_data_handlers.util import apply_voi_lut
 import numpy as np
 import tensorflow as tf 
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import pandas as pd
+from multiprocess import parallel_process
 
 
 csv_path = ".\\GroundTruth.csv"
@@ -32,23 +33,33 @@ def read_dcm(path, img_size = (224, 224)):
     data = (data * 255).astype(np.uint8)
     return tf.image.resize(data, img_size)
     
-def load_images(folder):
-    images = []
-    labels = []
+def process_image(image_path, metadata):
+    image = read_dcm(image_path)
+    base_name = os.path.splitext(os.path.basename(image_path))[0]
+    row = metadata[metadata['image_name'] == base_name]
+    label = row['target'].values[0] if not row.empty else -1
+    return image, label
 
-    for filename in os.listdir(folder):
-        if filename.endswith(".dcm"):
-            image_path = os.path.join(folder, filename)
-            image = read_dcm(image_path)
+def main():
 
-            base_name = os.path.splitext(filename)[0]
-            row = metadata[metadata['image_name'] == base_name]
-            label = row['target'].values[0] if not row.empty else -1
-            images.append(image)
-            labels.append(label)
-    return images
+    def parallel_load_images(folder, metadata):
+        image_paths = [os.path.join(folder, filename) for filename in os.listdir(folder) if filename.endswith(".dcm")]
+        args = [(path, metadata) for path in image_paths]
 
-current_directory = os.getcwd()
-dcm_dir = os.path.join(current_directory, "data")
-train_images = load_images(dcm_dir, "train")
-test_images = load_images(dcm_dir, "test")
+        results = parallel_process(process_image, args, processors=12)
+        images, labels = zip(*results)
+        return list(images), list(labels)
+
+    current_directory = os.getcwd()
+    dcm_dir = os.path.join(current_directory, "data")
+    train_images = parallel_load_images(".\\data\\train", metadata)
+    test_images = parallel_load_images(".\\data\\test", metadata)
+
+    plt.figure(figsize=(10, 10))
+    for i in range(9):
+        ax = plt.subplot(3, 3, i + 1)
+        plt.imshow(train_images[i])
+        plt.axis("off")
+
+if __name__ == "__main__":
+    main()

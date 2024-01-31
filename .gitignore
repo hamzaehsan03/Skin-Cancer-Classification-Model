@@ -3,4 +3,5 @@ ISIC_2020_Test_DICOM_corrected.zip
 *.dcm 
 *.zip
 *.csv
+*.pyc
 ISIC_2020_Train_DICOM_corrected.zip

@@ -3,8 +3,8 @@ import pydicom
 import os
 
 current_directory = os.getcwd()
-dcm_dir = os.path.join(current_directory, "data")
+dcm_dir = os.path.join(current_directory, "data\\train\\ISIC_0052212.dcm")
 
 
-dicom_file = pydicom.read_file(dcm_dir, "train\\ISIC_0052212.dcm")
+dicom_file = pydicom.read_file(dcm_dir)
 print(dicom_file)

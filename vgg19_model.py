@@ -31,6 +31,17 @@ model = Model(base_model.input, x)
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 train_data = ImageDataGenerator(1./255)
+# train_data = ImageDataGenerator(
+#     1./255,
+#     rotation_range=40,
+#     width_shift_range=0.2,
+#     height_shift_range=0.2,
+#     shear_range=0.2,
+#     zoom_range=0.2,
+#     horizontal_flip=True,
+#     fill_mode='nearest'
+# )
+
 train_gen = train_data.flow_from_directory(
     'data/train',
     target_size = (224, 224),

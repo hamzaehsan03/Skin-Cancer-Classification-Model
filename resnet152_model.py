@@ -5,6 +5,8 @@ from keras.models import Model
 from keras.layers import Dense, GlobalAveragePooling2D, Dropout
 from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
 from keras.preprocessing.image import ImageDataGenerator
+from sklearn.utils import class_weight
+import numpy as np
 
 # Load default resnet model
 base_model = ResNet152(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
@@ -20,12 +22,22 @@ x = Dropout(0.5)(x)
 predictions = Dense(1, activation='sigmoid')(x)
 
 
-model = Model(inputs=base_model.input, outputs=x)
+model = Model(inputs=base_model.input, outputs=predictions)
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 
 train_data = ImageDataGenerator(1./255)
 
+train_data = ImageDataGenerator(
+    1./255,
+    rotation_range=40,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
 
 train_gen = train_data.flow_from_directory(
     'data/train',
@@ -42,6 +54,14 @@ validation_gen = validation_data.flow_from_directory(
     class_mode='binary'
 )
 
+class_weights = class_weight.compute_class_weight(
+    'balanced',
+    classes=np.unique(train_gen.classes),
+    y=train_gen.classes
+)
+
+class_weight_dict = dict(enumerate(class_weights))
+
 log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 callbacks = [
     EarlyStopping(patience=5, monitor='val_loss'),
@@ -53,5 +73,6 @@ history = model.fit(
     train_gen,
     epochs=10, 
     validation_data=validation_gen,
-    callbacks=callbacks
+    callbacks=callbacks,
+    class_weight=class_weight_dict
 )

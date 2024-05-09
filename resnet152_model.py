@@ -1,21 +1,23 @@
 import tensorflow as tf
 import datetime
-from keras.applications import ResNet152
+from keras.applications import ResNet152V2
 from keras.models import Model
 from keras.layers import Dense, GlobalAveragePooling2D, Dropout
 from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard, ReduceLROnPlateau
 from keras.preprocessing.image import ImageDataGenerator
 from sklearn.utils import class_weight
+from sklearn.model_selection import KFold
 import numpy as np
 
+tf.config.set_visible_devices([], 'GPU')
 
 # Load default resnet model
-base_model = ResNet152(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+base_model = ResNet152V2(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
 base_model.summary()
-# for layer in base_model.layers:
-#     layer.trainable = False
-for layer in base_model.layers[-20:]:
-    layer.trainable = True
+for layer in base_model.layers:
+    layer.trainable = False
+# for layer in base_model.layers[-5:]:
+#     layer.trainable = True
 
 
 x = base_model.output
@@ -24,10 +26,10 @@ x = Dense(1024, activation='relu')(x)
 x = Dropout(0.5)(x)
 predictions = Dense(1, activation='sigmoid')(x)
 
-
-
+initial_learning_rate = 1e-4  
+optimizer = tf.keras.optimizers.Adam(learning_rate=initial_learning_rate)
 model = Model(inputs=base_model.input, outputs=predictions)
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
 
 
 train_data = ImageDataGenerator(1./255)
@@ -46,7 +48,7 @@ train_data = ImageDataGenerator(1./255)
 train_gen = train_data.flow_from_directory(
     'data/train',
     target_size = (224, 224),
-    batch_size = 16,
+    batch_size = 32,
     class_mode = 'binary'
 )
 
@@ -54,17 +56,17 @@ validation_data = ImageDataGenerator(1./255)
 validation_gen = validation_data.flow_from_directory(
     'data/validation',
     target_size=(224, 224),
-    batch_size=16,
+    batch_size=32,
     class_mode='binary'
 )
 
-class_weights = class_weight.compute_class_weight(
-    'balanced',
-    classes=np.unique(train_gen.classes),
-    y=train_gen.classes
-)
+# class_weights = class_weight.compute_class_weight(
+#     'balanced',
+#     classes=np.unique(train_gen.classes),
+#     y=train_gen.classes
+# )
 
-class_weight_dict = dict(enumerate(class_weights))
+#class_weight_dict = dict(enumerate(class_weights))
 
 log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 callbacks = [
@@ -76,8 +78,8 @@ callbacks = [
 
 history = model.fit(
     train_gen,
-    epochs=10, 
+    epochs=40, 
     validation_data=validation_gen,
-    callbacks=callbacks,
-    class_weight=class_weight_dict
+    callbacks=callbacks
+    #class_weight=class_weight_dict
 )

@@ -8,3 +8,5 @@ ISIC_2020_Test_DICOM_corrected.zip
 ISIC_2020_Train_DICOM_corrected.zip
 logs
 *.h5
+fakeme.py
+*.docx
